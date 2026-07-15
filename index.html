@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Water Polo Tactics Board</title>
+    <style>
+        :root {
+            --pool-blue: #0077be;
+            --pool-lines: #ffffff;
+            --red-zone: #ef4444;
+            --yellow-zone: #eab308;
+            --bg-dark: #0f172a;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-dark);
+            color: #f8fafc;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        header {
+            text-align: center;
+            padding: 20px;
+            width: 100%;
+            background-color: #1e293b;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: #38bdf8;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+
+        /* Το Γήπεδο (Πισίνα) */
+        .pool-container {
+            position: relative;
+            width: 90vw;
+            max-width: 800px;
+            aspect-ratio: 2 / 1; /* 2:1 αναλογία γηπέδου */
+            background-color: var(--pool-blue);
+            border: 4px solid var(--pool-lines);
+            border-radius: 8px;
+            margin: 30px auto;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            overflow: hidden;
+            touch-action: none; /* Απαραίτητο για ομαλό drag στο κινητό */
+        }
+
+        /* Γραμμές Γηπέδου (2m, 5m, Center) */
+        .pool-line {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            opacity: 0.6;
+        }
+
+        .line-center {
+            left: 50%;
+            border-left: 2px dashed var(--pool-lines);
+        }
+
+        /* 2m και 5m γραμμές (Αριστερά και Δεξιά) */
+        .line-2m-left { left: 10%; border-left: 2px solid var(--red-zone); }
+        .line-5m-left { left: 25%; border-left: 2px solid var(--yellow-zone); }
+        .line-2m-right { right: 10%; border-left: 2px solid var(--red-zone); }
+        .line-5m-right { right: 25%; border-left: 2px solid var(--yellow-zone); }
+
+        /* Εστίες (Goals) */
+        .goal {
+            position: absolute;
+            top: 35%;
+            height: 30%;
+            width: 15px;
+            background-color: #ffffff;
+            border: 2px solid #000;
+        }
+        .goal-left { left: -15px; border-radius: 4px 0 0 4px; }
+        .goal-right { right: -15px; border-radius: 0 4px 4px 0; }
+
+        /* Παίκτες και Μπάλα (Draggable Elements) */
+        .draggable {
+            position: absolute;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.9rem;
+            cursor: move;
+            user-select: none;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+            border: 2px solid #ffffff;
+            transition: transform 0.1s;
+            z-index: 10;
+        }
+
+        .draggable:active {
+            transform: scale(1.15);
+            z-index: 100;
+        }
+
+        /* Ομάδες */
+        .player-dark {
+            background-color: #1e293b;
+            color: #f8fafc;
+        }
+
+        .player-white {
+            background-color: #ffffff;
+            color: #0f172a;
+            border-color: #0f172a;
+        }
+
+        .ball {
+            background-color: #f97316; /* Πορτοκαλί μπάλα */
+            color: white;
+            border-color: #ffffff;
+            width: 25px;
+            height: 25px;
+            font-size: 0.7rem;
+        }
+
+        /* Οδηγίες & Reset */
+        .controls {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .btn-reset {
+            background-color: #38bdf8;
+            color: #0f172a;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-reset:hover {
+            background-color: #0ea5e9;
+            color: white;
+        }
+
+        footer {
+            margin-top: auto;
+            padding: 20px;
+            background-color: #1e293b;
+            width: 100%;
+            text-align: center;
+            color: #64748b;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🤽‍♂️ Water Polo Tactics Board</h1>
+        <p>Drag the players and the ball to design your tactics</p>
+    </header>
+
+    <div class="pool-container" id="pool">
+        <div class="pool-line line-center"></div>
+        <div class="pool-line line-2m-left"></div>
+        <div class="pool-line line-5m-left"></div>
+        <div class="pool-line line-2m-right"></div>
+        <div class="pool-line line-5m-right"></div>
+
+        <div class="goal goal-left"></div>
+        <div class="goal goal-right"></div>
+
+        <div class="draggable player-dark" id="p1" style="top: 20%; left: 35%;">1</div>
+        <div class="draggable player-dark" id="p2" style="top: 50%; left: 20%;">2</div>
+        <div class="draggable player-dark" id="p3" style="top: 80%; left: 35%;">3</div>
+        <div class="draggable player-dark" id="p4" style="top: 30%; left: 60%;">4</div>
+        <div class="draggable player-dark" id="p5" style="top: 70%; left: 60%;">5</div>
+        <div class="draggable player-dark" id="p6" style="top: 50%; left: 45%;">6</div>
+
+        <div class="draggable player-white" id="d1" style="top: 25%; left: 30%;">1</div>
+        <div class="draggable player-white" id="d2" style="top: 50%; left: 15%;">2</div>
+        <div class="draggable player-white" id="d3" style="top: 75%; left: 30%;">3</div>
+        <div class="draggable player-white" id="d4" style="top: 35%; left: 55%;">4</div>
+        <div class="draggable player-white" id="d5" style="top: 65%; left: 55%;">5</div>
+        <div class="draggable player-white" id="d6" style="top: 50%; left: 40%;">6</div>
+
+        <div class="draggable ball" id="ball" style="top: 10%; left: 50%;">⚽</div>
+    </div>
+
+    <div class="controls">
+        <button class="btn-reset" onclick="resetBoard()">Reset Positions</button>
+    </div>
+
+    <footer>
+        <p>Tactics Board developed for George Kontrafouris // NEP Water Polo</p>
+    </footer>
+
+    <script>
+        const draggables = document.querySelectorAll('.draggable');
+        const pool = document.getElementById('pool');
+
+        // Αποθήκευση των αρχικών θέσεων για το Reset
+        const initialPositions = {};
+        draggables.forEach(el => {
+            initialPositions[el.id] = {
+                top: el.style.top,
+                left: el.style.left
+            };
+        });
+
+        draggables.forEach(draggable => {
+            let isDragging = false;
+            let startX, startY;
+            let elemX, elemY;
+
+            // Λειτουργία Drag για Desktop (Mouse) & Κινητά (Touch)
+            const startDrag = (e) => {
+                isDragging = true;
+                
+                // Υποστήριξη touch events
+                const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+                const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+
+                startX = clientX;
+                startY = clientY;
+                
+                elemX = draggable.offsetLeft;
+                elemY = draggable.offsetTop;
+
+                document.addEventListener('mousemove', drag);
+                document.addEventListener('mouseup', stopDrag);
+                document.addEventListener('touchmove', drag, { passive: false });
+                document.addEventListener('touchend', stopDrag);
+            };
+
+            const drag = (e) => {
+                if (!isDragging) return;
+                
+                // Αποτροπή του scroll στην οθόνη του κινητού κατά το drag
+                if (e.type === 'touchmove') e.preventDefault();
+
+                const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+                const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+
+                const dx = clientX - startX;
+                const dy = clientY - startY;
+
+                let newX = elemX + dx;
+                let newY = elemY + dy;
+
+                // Περιορισμός των παικτών μέσα στα όρια της πισίνας
+                const maxLeft = pool.clientWidth - draggable.clientWidth;
+                const maxTop = pool.clientHeight - draggable.clientHeight;
+
+                if (newX < 0) newX = 0;
+                if (newX > maxLeft) newX = maxLeft;
+                if (newY < 0) newY = 0;
+                if (newY > maxTop) newY = maxTop;
+
+                draggable.style.left = newX + 'px';
+                draggable.style.top = newY + 'px';
+            };
+
+            const stopDrag = () => {
+                isDragging = false;
+                document.removeEventListener('mousemove', drag);
+                document.removeEventListener('mouseup', stopDrag);
+                document.removeEventListener('touchmove', drag);
+                document.removeEventListener('touchend', stopDrag);
+            };
+
+            draggable.addEventListener('mousedown', startDrag);
+            draggable.addEventListener('touchstart', startDrag, { passive: true });
+        });
+
+        // Επαναφορά παικτών στις αρχικές θέσεις
+        function resetBoard() {
+            draggables.forEach(el => {
+                el.style.top = initialPositions[el.id].top;
+                el.style.left = initialPositions[el.id].left;
+            });
+        }
+    </script>
+</body>
+</html>
